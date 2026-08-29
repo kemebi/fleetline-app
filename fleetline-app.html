@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleetline</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+  :root {
+    --asphalt: #14181C;
+    --panel: #1D2329;
+    --amber: #F5A623;
+    --green: #3DDC84;
+    --red: #E5484D;
+    --steel: #8A9199;
+    --paper: #EDEFF1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--asphalt);
+    color: var(--paper);
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  header {
+    border-bottom: 1px solid #2A3138;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--asphalt);
+    z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: var(--amber);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: var(--asphalt); font-size: 16px;
+  }
+  .brand-title { font-weight: 700; font-size: 15px; }
+  .brand-sub { font-size: 10px; color: var(--steel); letter-spacing: 1px; }
+  .tabs { display: flex; gap: 6px; background: var(--panel); padding: 4px; border-radius: 8px; }
+  .tab-btn {
+    padding: 7px 14px; border-radius: 6px; border: none;
+    background: transparent; color: var(--steel);
+    font-weight: 600; font-size: 13px; cursor: pointer;
+  }
+  .tab-btn.active { background: var(--amber); color: var(--asphalt); }
+  main { padding: 20px; }
+  .driver-view { max-width: 440px; margin: 0 auto; }
+  .dashboard-view { max-width: 900px; margin: 0 auto; }
+  .gate { max-width: 360px; margin: 60px auto; text-align: center; }
+  .gate-icon { font-size: 28px; margin-bottom: 14px; }
+  .gate-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .gate-desc { font-size: 13px; color: var(--steel); margin-bottom: 18px; }
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #2A3138;
+    background: #0F1317;
+    color: var(--paper);
+    font-size: 14px;
+    font-family: inherit;
+  }
+  input:disabled { background: #171C21; opacity: 0.6; }
+  input:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+  .btn-primary {
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--amber);
+    color: var(--asphalt);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+  }
+  .btn-primary:disabled { opacity: 0.6; cursor: default; }
+  .btn-stop { background: #2A1A1B; color: var(--red); border: 1px solid var(--red); }
+  .btn-refresh {
+    background: none;
+    border: 1px solid #2A3138;
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--steel);
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .error-box {
+    padding: 12px;
+    background: #2A1A1B;
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--red);
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .panel {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 18px;
+    border: 1px solid #2A3138;
+  }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--steel); margin-bottom: 6px; font-weight: 500; }
+  .consent-panel {
+    background: var(--panel); border-radius: 12px; padding: 18px; border: 1px solid #2A3138;
+    font-size: 14px; line-height: 1.6; margin-bottom: 16px;
+  }
+  .consent-panel ul { padding-left: 20px; margin: 0; }
+  .hint-row { margin-top: 16px; font-size: 12px; color: var(--steel); display: flex; gap: 6px; }
+  .last-sent { margin-top: 14px; font-size: 11px; color: var(--green); text-align: center; }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-card { background: var(--panel); border-radius: 10px; padding: 14px 16px; border: 1px solid #2A3138; }
+  .stat-label { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: var(--steel); font-size: 11px; }
+  .stat-value { font-size: 26px; font-weight: 700; }
+  .list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .list-label { font-size: 11px; color: var(--steel); letter-spacing: 1px; }
+  .vehicle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--panel); border-radius: 10px; padding: 14px 16px;
+    text-decoration: none; color: var(--paper); margin-bottom: 8px;
+    border: 1px solid #2A3138;
+  }
+  .vehicle-row.active { border-color: #2E4A3A; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dot.green { background: var(--green); animation: pulseAnim 2s ease-in-out infinite; }
+  .dot.steel { background: var(--steel); }
+  @keyframes pulseAnim { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .row-left { display: flex; align-items: center; gap: 12px; }
+  .row-plate { font-weight: 600; font-size: 14px; }
+  .row-sub { font-size: 12px; color: var(--steel); margin-top: 2px; }
+  .row-time { font-size: 11px; display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+  .row-coords { font-size: 11px; color: var(--steel); margin-top: 3px; }
+  .empty-state {
+    background: var(--panel); border: 1px dashed #333B42; border-radius: 10px;
+    padding: 48px 20px; text-align: center; color: var(--steel);
+  }
+  .loading-state { color: var(--steel); padding: 40px; text-align: center; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">F</div>
+    <div>
+      <div class="brand-title">FLEETLINE</div>
+      <div class="brand-sub mono">LIVE · CONNECTED</div>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabDriverBtn">Driver</button>
+    <button class="tab-btn" id="tabDispatchBtn">🔒 Dispatch</button>
+  </div>
+</header>
+
+<main>
+  <!-- DRIVER VIEW -->
+  <div id="driverView" class="driver-view">
+    <!-- Consent screen -->
+    <div id="consentScreen">
+      <div style="font-size:28px; margin-bottom:14px;">🛡️</div>
+      <div style="font-size:17px; font-weight:700; margin-bottom:10px;">Before you start sharing</div>
+      <div class="consent-panel">
+        <p style="margin-top:0;">By continuing, you agree that:</p>
+        <ul>
+          <li>Your live location will be visible to dispatch while you're checked in</li>
+          <li>Your plate must already be registered by dispatch, with your consent recorded, before sharing works</li>
+          <li>You can stop sharing at any time by closing this page or tapping "Stop"</li>
+        </ul>
+      </div>
+      <button class="btn-primary" id="acceptConsentBtn">I agree — continue to check-in</button>
+    </div>
+
+    <!-- Check-in screen -->
+    <div id="checkinScreen" class="hidden">
+      <div style="margin-bottom:20px;">
+        <div class="mono" style="font-size:11px; color:var(--steel); letter-spacing:1px; margin-bottom:6px;">DRIVER CHECK-IN</div>
+        <div style="font-size:14px; color:var(--steel); line-height:1.5;">Enter your plate number and start sharing when you're on duty.</div>
+      </div>
+      <div class="panel">
+        <div class="field">
+          <label>Plate number</label>
+          <input id="plateInput" placeholder="e.g. ABC-123XY">
+        </div>
+        <div id="driverError" class="error-box hidden"></div>
+        <button class="btn-primary" id="startSharingBtn">▶ Start sharing location</button>
+        <button class="btn-primary btn-stop hidden" id="stopSharingBtn">⏹ Sharing live — tap to stop</button>
+        <div id="lastSent" class="last-sent hidden mono"></div>
+      </div>
+      <div class="hint-row">
+        <span>→ Your plate must be registered by dispatch first, with consent recorded, or check-in will be rejected.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISPATCH VIEW -->
+  <div id="dispatchView" class="hidden">
+    <!-- Login gate -->
+    <div id="dispatchGate" class="gate">
+      <div class="gate-icon">🔒</div>
+      <div class="gate-title">Dispatch access</div>
+      <div class="gate-desc">Enter your dispatch API key to view live fleet positions.</div>
+      <input type="password" id="apiKeyInput" placeholder="API key" style="text-align:center; margin-bottom:10px;">
+      <div id="gateError" class="error-box hidden"></div>
+      <button class="btn-primary" id="unlockBtn">Unlock dashboard</button>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard-view hidden">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">🚚 Vehicles reporting</div>
+          <div class="stat-value mono" id="statTotal">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" style="color:var(--green)">📶 Live (&lt; 5 min)</div>
+          <div class="stat-value mono" id="statActive" style="color:var(--green)">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">⚠ Stale / offline</div>
+          <div class="stat-value mono" id="statStale">0</div>
+        </div>
+      </div>
+      <div class="list-header">
+        <div class="list-label mono">FLEET POSITIONS · AUTO-REFRESH 8S</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-refresh" id="refreshBtn">↻ Refresh</button>
+          <button class="btn-refresh" id="logoutBtn">Log out</button>
+        </div>
+      </div>
+      <div id="dashError" class="error-box hidden"></div>
+      <div id="vehicleList"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API_BASE = "https://fleetline-backend-production.up.railway.app";
+let apiKey = "";
+let watchId = null;
+let refreshInterval = null;
+
+// ---------- Tab switching ----------
+document.getElementById('tabDriverBtn').addEventListener('click', () => switchView('driver'));
+document.getElementById('tabDispatchBtn').addEventListener('click', () => switchView('dispatch'));
+
+function switchView(view) {
+  document.getElementById('tabDriverBtn').classList.toggle('active', view === 'driver');
+  document.getElementById('tabDispatchBtn').classList.toggle('active', view === 'dispatch');
+  document.getElementById('driverView').classList.toggle('hidden', view !== 'driver');
+  document.getElementById('dispatchView').classList.toggle('hidden', view !== 'dispatch');
+}
+
+// ---------- Driver: consent ----------
+document.getElementById('acceptConsentBtn').addEventListener('click', () => {
+  document.getElementById('consentScreen').classList.add('hidden');
+  document.getElementById('checkinScreen').classList.remove('hidden');
+});
+
+// ---------- Driver: check-in ----------
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 10) return "just now";
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+function isStale(iso) {
+  if (!iso) return true;
+  return Date.now() - new Date(iso).getTime() > 5 * 60 * 1000;
+}
+
+function showDriverError(msg) {
+  const el = document.getElementById('driverError');
+  el.innerHTML = `⚠ ${msg}`;
+  el.classList.remove('hidden');
+}
+function hideDriverError() {
+  document.getElementById('driverError').classList.add('hidden');
+}
+
+async function pushPosition(pos) {
+  const plate = document.getElementById('plateInput').value.trim();
+  if (!plate) return;
+  const payload = {
+    plate: plate.toUpperCase(),
+    lat: pos.coords.latitude,
+    lng: pos.coords.longitude,
+    accuracy_m: pos.coords.accuracy,
+    speed_mps: pos.coords.speed ?? null
+  };
+  try {
+    const res = await fetch(`${API_BASE}/api/ping`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.status === 404) {
+      showDriverError("This plate isn't registered yet. Ask dispatch to add your vehicle.");
+      stopSharing();
+      return;
+    }
+    if (res.status === 403) {
+      showDriverError("Consent not on file for your account. Ask dispatch to confirm your consent.");
+      stopSharing();
+      return;
+    }
+    if (!res.ok) { showDriverError("Couldn't send location — will retry."); return; }
+    hideDriverError();
+    const lastSent = document.getElementById('lastSent');
+    lastSent.textContent = `Last sent: ${payload.lat.toFixed(5)}, ${payload.lng.toFixed(5)} · just now`;
+    lastSent.classList.remove('hidden');
+  } catch (e) {
+    showDriverError("Network error sending location — will retry.");
+  }
+}
+
+document.getElementById('startSharingBtn').addEventListener('click', () => {
+  const plate = document.getElementById('plateInput').value.trim();
+  if (!plate) { showDriverError("Enter the vehicle's plate number first."); return; }
+  if (!navigator.geolocation) { showDriverError("This browser doesn't support location sharing."); return; }
+  hideDriverError();
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      document.getElementById('startSharingBtn').classList.add('hidden');
+      document.getElementById('stopSharingBtn').classList.remove('hidden');
+      document.getElementById('plateInput').disabled = true;
+      pushPosition(pos);
+    },
+    (err) => {
+      stopSharing();
+      if (err.code === 1) showDriverError("Location permission denied. Enable it in your browser settings.");
+      else if (err.code === 2) showDriverError("Location unavailable. Check GPS/network.");
+      else showDriverError("Location request timed out. Try again.");
+    },
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+  );
+});
+
+document.getElementById('stopSharingBtn').addEventListener('click', stopSharing);
+
+function stopSharing() {
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  document.getElementById('startSharingBtn').classList.remove('hidden');
+  document.getElementById('stopSharingBtn').classList.add('hidden');
+  document.getElementById('plateInput').disabled = false;
+}
+
+// ---------- Dispatch: login ----------
+document.getElementById('unlockBtn').addEventListener('click', async () => {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const errBox = document.getElementById('gateError');
+  errBox.classList.add('hidden');
+  if (!key) { errBox.textContent = "Enter the dispatch API key."; errBox.classList.remove('hidden'); return; }
+  const btn = document.getElementById('unlockBtn');
+  btn.disabled = true; btn.textContent = "Checking...";
+  try {
+    const res = await fetch(`${API_BASE}/api/fleet/live`, { headers: { 'x-api-key': key } });
+    if (res.status === 401) {
+      errBox.textContent = "Incorrect API key.";
+      errBox.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = "Unlock dashboard";
+      return;
+    }
+    if (!res.ok) {
+      errBox.textContent = "Couldn't reach the server. Try again.";
+      errBox.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = "Unlock dashboard";
+      return;
+    }
+    apiKey = key;
+    document.getElementById('dispatchGate').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    loadFleet();
+    refreshInterval = setInterval(loadFleet, 8000);
+  } catch (e) {
+    errBox.textContent = "Network error — check your connection and try again.";
+    errBox.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = "Unlock dashboard";
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  apiKey = "";
+  if (refreshInterval) clearInterval(refreshInterval);
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('dispatchGate').classList.remove('hidden');
+  document.getElementById('apiKeyInput').value = "";
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadFleet);
+
+async function loadFleet() {
+  try {
+    const res = await fetch(`${API_BASE}/api/fleet/live`, { headers: { 'x-api-key': apiKey } });
+    if (res.status === 401) { showDashError("Session expired — API key rejected."); return; }
+    if (!res.ok) { showDashError("Server error loading fleet data."); return; }
+    const data = await res.json();
+    hideDashError();
+    renderFleet(data);
+  } catch (e) {
+    showDashError("Couldn't reach the server.");
+  }
+}
+
+function showDashError(msg) {
+  const el = document.getElementById('dashError');
+  el.innerHTML = `⚠ ${msg}`;
+  el.classList.remove('hidden');
+}
+function hideDashError() {
+  document.getElementById('dashError').classList.add('hidden');
+}
+
+function renderFleet(vehicles) {
+  const withPosition = vehicles.filter(v => v.lat != null);
+  const active = withPosition.filter(v => !isStale(v.recorded_at));
+  const stale = withPosition.length - active.length;
+
+  document.getElementById('statTotal').textContent = withPosition.length;
+  document.getElementById('statActive').textContent = active.length;
+  document.getElementById('statStale').textContent = stale;
+  document.getElementById('statStale').style.color = stale > 0 ? 'var(--red)' : 'var(--steel)';
+
+  const list = document.getElementById('vehicleList');
+  if (withPosition.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div style="font-size:28px; margin-bottom:12px; opacity:0.5;">📍</div>
+        <div style="font-size:14px; font-weight:600; color:var(--paper); margin-bottom:4px;">No vehicles reporting yet</div>
+        <div style="font-size:13px;">Register a vehicle and driver, then have the driver check in.</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = withPosition.map(v => {
+    const stale = isStale(v.recorded_at);
+    const mapUrl = `https://www.google.com/maps?q=${v.lat},${v.lng}`;
+    return `
+      <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="vehicle-row ${!stale ? 'active' : ''}">
+        <div class="row-left">
+          <div class="dot ${stale ? 'steel' : 'green'}"></div>
+          <div>
+            <div class="row-plate">${escapeHtml(v.plate)}</div>
+            <div class="row-sub">${v.driver_name ? escapeHtml(v.driver_name) + ' · ' : ''}${v.vehicle_type ? escapeHtml(v.vehicle_type) : 'Vehicle'}</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="row-time mono" style="color:${stale ? 'var(--red)' : 'var(--green)'}">⏱ ${timeAgo(v.recorded_at)}</div>
+          <div class="row-coords mono">${v.lat.toFixed(4)}, ${v.lng.toFixed(4)}</div>
+        </div>
+      </a>`;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('unlockBtn').click();
+});
+</script>
+
+</body>
+</html>
