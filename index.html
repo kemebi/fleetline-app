@@ -212,8 +212,8 @@
       <div class="panel" style="margin-top:14px;">
         <div style="font-size:13px; font-weight:600; margin-bottom:12px; color:var(--steel);">NEED HELP?</div>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          <button class="btn-primary" style="background:var(--panel); color:var(--paper); border:1px solid #2A3138;" onclick="contactAndLog('Driver tapped: Call Dispatch', 'tel:+2349164574145')">📞 Call Dispatch</button>
-          <button class="btn-primary" style="background:var(--panel); color:var(--paper); border:1px solid #2A3138;" onclick="contactAndLog('Driver tapped: WhatsApp Dispatch', 'https://wa.me/2349164574145?text=Issue%20with%20vehicle')">💬 WhatsApp Dispatch</button>
+          <button class="btn-primary" style="background:var(--panel); color:var(--paper); border:1px solid #2A3138;" onclick="contactAndLog('Driver tapped: Call Dispatch', 'call')">📞 Call Dispatch</button>
+          <button class="btn-primary" style="background:var(--panel); color:var(--paper); border:1px solid #2A3138;" onclick="contactAndLog('Driver tapped: WhatsApp Dispatch', 'whatsapp')">💬 WhatsApp Dispatch</button>
           <button class="btn-primary btn-stop" onclick="contactAndLog('Driver tapped: EMERGENCY (112)', 'tel:112')">🚨 Emergency (112)</button>
           <button class="btn-primary" style="background:#2A1A1B; color:var(--amber); border:1px solid var(--amber);" onclick="contactAndLog('Driver tapped: Road Safety / FRSC (122)', 'tel:122')">🛣️ Road Safety / FRSC (122)</button>
         </div>
@@ -268,7 +268,24 @@ let watchId = null;
 let refreshInterval = null;
 
 // Log a report, then follow through with the call/WhatsApp/dial action.
-async function contactAndLog(message, url) {
+let dispatchPhone = "+2349164574145";
+let dispatchWhatsapp = "2349164574145";
+
+async function loadDispatchSettings() {
+  try {
+    const res = await fetch(`${API_BASE}/api/settings`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.dispatch_phone) dispatchPhone = data.dispatch_phone;
+      if (data.dispatch_whatsapp) dispatchWhatsapp = data.dispatch_whatsapp;
+    }
+  } catch (e) {
+    console.error('Could not load dispatch settings, using defaults:', e);
+  }
+}
+loadDispatchSettings();
+
+async function contactAndLog(message, type) {
   const plate = document.getElementById('plateInput').value.trim();
   if (plate) {
     try {
@@ -281,6 +298,10 @@ async function contactAndLog(message, url) {
       console.error('Report logging failed:', e);
     }
   }
+  let url;
+  if (type === 'call') url = `tel:${dispatchPhone}`;
+  else if (type === 'whatsapp') url = `https://wa.me/${dispatchWhatsapp}?text=Issue%20with%20vehicle`;
+  else url = type;
   window.location.href = url;
 }
 
