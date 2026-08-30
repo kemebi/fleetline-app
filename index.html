@@ -208,6 +208,16 @@
       <div class="hint-row">
         <span>→ Your plate must be registered by dispatch first, with consent recorded, or check-in will be rejected.</span>
       </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <div style="font-size:13px; font-weight:600; margin-bottom:12px; color:var(--steel);">NEED HELP?</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button class="btn-primary" style="background:var(--panel); color:var(--paper); border:1px solid #2A3138;" onclick="contactAndLog('Driver tapped: Call Dispatch', 'tel:+2349164574145')">📞 Call Dispatch</button>
+          <button class="btn-primary" style="background:var(--panel); color:var(--paper); border:1px solid #2A3138;" onclick="contactAndLog('Driver tapped: WhatsApp Dispatch', 'https://wa.me/2349164574145?text=Issue%20with%20vehicle')">💬 WhatsApp Dispatch</button>
+          <button class="btn-primary btn-stop" onclick="contactAndLog('Driver tapped: EMERGENCY (112)', 'tel:112')">🚨 Emergency (112)</button>
+          <button class="btn-primary" style="background:#2A1A1B; color:var(--amber); border:1px solid var(--amber);" onclick="contactAndLog('Driver tapped: Road Safety / FRSC (122)', 'tel:122')">🛣️ Road Safety / FRSC (122)</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -250,13 +260,29 @@
       <div id="vehicleList"></div>
     </div>
   </div>
-</main>
-
-<script>
+  </main>
+  <script>
 const API_BASE = "https://fleetline-backend-production.up.railway.app";
 let apiKey = "";
 let watchId = null;
 let refreshInterval = null;
+
+// Log a report, then follow through with the call/WhatsApp/dial action.
+async function contactAndLog(message, url) {
+  const plate = document.getElementById('plateInput').value.trim();
+  if (plate) {
+    try {
+      await fetch(`${API_BASE}/api/reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plate: plate.toUpperCase(), message })
+      });
+    } catch (e) {
+      console.error('Report logging failed:', e);
+    }
+  }
+  window.location.href = url;
+}
 
 // ---------- Tab switching ----------
 document.getElementById('tabDriverBtn').addEventListener('click', () => switchView('driver'));
