@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Fleetline — Driver Check-In</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #2a313c;
+    --paper: #e6edf3;
+    --steel: #7d8590;
+    --green: #3fb950;
+    --red: #f85149;
+    --amber: #d29922;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--paper);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 48px;
+  }
+  main { width: 100%; max-width: 420px; }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--steel);
+    font-size: 14px;
+    margin: 0 0 28px;
+    line-height: 1.5;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--steel);
+    margin-bottom: 6px;
+  }
+  input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    color: var(--paper);
+    font-size: 16px;
+    text-transform: uppercase;
+  }
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--steel);
+  }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  details summary {
+    color: var(--steel);
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  details[open] summary { margin-bottom: 12px; }
+
+  button {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #startBtn { background: var(--green); color: #04140a; }
+  #startBtn:disabled { background: var(--border); color: var(--steel); cursor: not-allowed; }
+  #stopBtn { background: transparent; color: var(--red); border: 1px solid var(--red); }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--steel);
+    flex-shrink: 0;
+  }
+  .dot.live { background: var(--green); box-shadow: 0 0 0 4px rgba(63,185,80,0.15); }
+  .dot.error { background: var(--red); }
+  .status-text { font-size: 14px; font-weight: 600; }
+  .status-sub { font-size: 13px; color: var(--steel); margin-top: 2px; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .stat-label { font-size: 11px; color: var(--steel); margin-bottom: 4px; }
+  .stat-value { font-size: 15px; font-family: ui-monospace, monospace; }
+
+  .banner {
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .banner.show { display: block; }
+  .banner.error { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); color: #ffb4ae; }
+  .banner.warn { background: rgba(210,153,34,0.1); border: 1px solid rgba(210,153,34,0.3); color: #f0c05a; }
+
+  .hidden { display: none; }
+  footer { text-align: center; color: var(--steel); font-size: 12px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Driver Check-In</h1>
+  <p class="sub">Keep this page open while driving. It shares your vehicle's location with dispatch every 30 seconds — nothing else on your phone is accessed.</p>
+
+  <div class="card" id="setupCard">
+    <div class="field">
+      <label for="plateInput">Vehicle plate number</label>
+      <input type="text" id="plateInput" placeholder="e.g. ABC123XY" autocomplete="off">
+    </div>
+    <details>
+      <summary>Server settings</summary>
+      <div class="field">
+        <label for="apiBaseInput">Backend URL</label>
+        <input type="text" id="apiBaseInput" placeholder="https://your-app.up.railway.app">
+      </div>
+    </details>
+    <div id="setupBanner" class="banner error"></div>
+    <div style="margin-top:16px;">
+      <button id="startBtn">Start check-in</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="liveCard">
+    <div class="status-row">
+      <div class="dot" id="statusDot"></div>
+      <div>
+        <div class="status-text" id="statusText">Waiting for location…</div>
+        <div class="status-sub" id="statusSub">Plate <span id="plateLabel"></span></div>
+      </div>
+    </div>
+    <div id="liveBanner" class="banner warn"></div>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">LAST PING</div>
+        <div class="stat-value" id="statLastPing">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">PINGS SENT</div>
+        <div class="stat-value" id="statCount">0</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <button id="stopBtn">Stop check-in</button>
+    </div>
+  </div>
+
+  <footer>Fleetline · your location is only stored once dispatch has your signed consent on file</footer>
+</main>
+
+<script>
+const PING_INTERVAL_MS = 30000;
+const $ = (id) => document.getElementById(id);
+
+let watchId = null;
+let intervalId = null;
+let pingCount = 0;
+let lastKnownPosition = null;
+
+// Restore saved values
+$('plateInput').value = localStorage.getItem('fleetline_plate') || '';
+$('apiBaseInput').value = localStorage.getItem('fleetline_api_base') || '';
+
+function showSetupError(msg) {
+  const b = $('setupBanner');
+  b.textContent = msg;
+  b.classList.add('show');
+}
+function hideSetupError() {
+  $('setupBanner').classList.remove('show');
+}
+function showLiveBanner(msg, isError) {
+  const b = $('liveBanner');
+  b.textContent = msg;
+  b.className = 'banner show ' + (isError ? 'error' : 'warn');
+}
+function hideLiveBanner() {
+  $('liveBanner').classList.remove('show');
+}
+function setDot(state) {
+  $('statusDot').className = 'dot' + (state === 'live' ? ' live' : state === 'error' ? ' error' : '');
+}
+
+$('startBtn').addEventListener('click', () => {
+  const plate = $('plateInput').value.trim().toUpperCase();
+  const apiBase = $('apiBaseInput').value.trim().replace(/\/$/, '');
+
+  hideSetupError();
+  if (!plate) return showSetupError('Enter the vehicle plate number.');
+  if (!apiBase) return showSetupError('Enter the backend URL (ask your admin if unsure).');
+  if (!navigator.geolocation) return showSetupError('This browser does not support location sharing.');
+
+  localStorage.setItem('fleetline_plate', plate);
+  localStorage.setItem('fleetline_api_base', apiBase);
+
+  $('setupCard').classList.add('hidden');
+  $('liveCard').classList.remove('hidden');
+  $('plateLabel').textContent = plate;
+
+  startWatching(plate, apiBase);
+});
+
+$('stopBtn').addEventListener('click', () => {
+  stopWatching();
+  $('liveCard').classList.add('hidden');
+  $('setupCard').classList.remove('hidden');
+  $('statusText').textContent = 'Waiting for location…';
+  setDot('idle');
+  pingCount = 0;
+  $('statCount').textContent = '0';
+  $('statLastPing').textContent = '—';
+});
+
+function startWatching(plate, apiBase) {
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => { lastKnownPosition = pos; },
+    (err) => {
+      setDot('error');
+      $('statusText').textContent = 'Location unavailable';
+      showLiveBanner(geoErrorMessage(err), true);
+    },
+    { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+  );
+
+  sendPing(plate, apiBase); // send one immediately once we have a fix
+  intervalId = setInterval(() => sendPing(plate, apiBase), PING_INTERVAL_MS);
+}
+
+function stopWatching() {
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  if (intervalId !== null) clearInterval(intervalId);
+  watchId = null;
+  intervalId = null;
+  lastKnownPosition = null;
+}
+
+async function sendPing(plate, apiBase) {
+  if (!lastKnownPosition) return; // no GPS fix yet, wait for next tick
+
+  const { latitude, longitude, accuracy, speed } = lastKnownPosition.coords;
+
+  try {
+    const res = await fetch(`${apiBase}/ping`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plate,
+        lat: latitude,
+        lng: longitude,
+        accuracy_m: accuracy ?? null,
+        speed_mps: speed ?? null,
+      }),
+    });
+
+    if (res.status === 403) {
+      setDot('error');
+      $('statusText').textContent = 'Consent required';
+      showLiveBanner('Your location is not being recorded yet — ask your admin to confirm your driver consent is on file.', true);
+      return;
+    }
+    if (res.status === 404) {
+      setDot('error');
+      $('statusText').textContent = 'Vehicle not recognized';
+      showLiveBanner('This plate number is not registered or is inactive. Double-check it with your admin.', true);
+      return;
+    }
+    if (!res.ok) {
+      setDot('error');
+      $('statusText').textContent = 'Server error';
+      showLiveBanner('The server rejected the last update. Will retry automatically.', true);
+      return;
+    }
+
+    hideLiveBanner();
+    setDot('live');
+    $('statusText').textContent = 'Sharing location';
+    pingCount += 1;
+    $('statCount').textContent = String(pingCount);
+    $('statLastPing').textContent = new Date().toLocaleTimeString();
+  } catch (e) {
+    setDot('error');
+    $('statusText').textContent = 'Connection lost';
+    showLiveBanner('Could not reach the server. Check your internet connection — will retry automatically.', true);
+  }
+}
+
+function geoErrorMessage(err) {
+  switch (err.code) {
+    case err.PERMISSION_DENIED:
+      return 'Location access was denied. Enable location for this page in your browser settings, then start check-in again.';
+    case err.POSITION_UNAVAILABLE:
+      return 'Could not determine your location right now. Will keep trying.';
+    case err.TIMEOUT:
+      return 'Location request timed out. Will keep trying.';
+    default:
+      return 'Location error. Will keep trying.';
+  }
+}
+</script>
+</body>
+  </html>
