@@ -346,10 +346,17 @@ function showDriverError(msg) {
 function hideDriverError() {
   document.getElementById('driverError').classList.add('hidden');
 }
+let lastSentAt = 0;
+const MIN_INTERVAL_MS = 20000; // 20 seconds between pings
 
 async function pushPosition(pos) {
+  const now = Date.now();
+  if (now - lastSentAt < MIN_INTERVAL_MS) return;
+  lastSentAt = now;
+
   const plate = document.getElementById('plateInput').value.trim();
   if (!plate) return;
+  
   const payload = {
     plate: plate.toUpperCase(),
     lat: pos.coords.latitude,
@@ -382,12 +389,20 @@ async function pushPosition(pos) {
     showDriverError("Network error sending location — will retry.");
   }
 }
-
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+  } catch (e) {
+    console.error('Wake lock failed:', e);
+  }
+  
 document.getElementById('startSharingBtn').addEventListener('click', () => {
   const plate = document.getElementById('plateInput').value.trim();
   if (!plate) { showDriverError("Enter the vehicle's plate number first."); return; }
   if (!navigator.geolocation) { showDriverError("This browser doesn't support location sharing."); return; }
   hideDriverError();
+  requestWakeLock();
   watchId = navigator.geolocation.watchPosition(
     (pos) => {
       document.getElementById('startSharingBtn').classList.add('hidden');
@@ -408,6 +423,7 @@ document.getElementById('startSharingBtn').addEventListener('click', () => {
 document.getElementById('stopSharingBtn').addEventListener('click', stopSharing);
 
 function stopSharing() {
+  if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
   if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
   document.getElementById('startSharingBtn').classList.remove('hidden');
   document.getElementById('stopSharingBtn').classList.add('hidden');
