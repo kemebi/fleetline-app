@@ -396,7 +396,7 @@ async function requestWakeLock() {
   } catch (e) {
     console.error('Wake lock failed:', e);
   }
-  
+    }
 document.getElementById('startSharingBtn').addEventListener('click', () => {
   const plate = document.getElementById('plateInput').value.trim();
   if (!plate) { showDriverError("Enter the vehicle's plate number first."); return; }
