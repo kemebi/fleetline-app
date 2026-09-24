@@ -1,6 +1,7 @@
 {
   "name": "Fleetline Driver Check-In",
   "short_name": "Fleetline",
+  "description": "Live GPS check-in for drivers and real-time fleet tracking for dispatch.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#14181C",
